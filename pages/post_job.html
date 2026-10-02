@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post a Job | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/recruiter_dashboard.html" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/recruiter_dashboard.html">Dashboard</a>
+            <a href="/post_job.html" class="active">Post a Job</a>
+            <a href="/my_jobs.html">My Jobs</a>
+            <span class="user-chip" id="userName"></span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dash dash-narrow">
+        <h1>Post a new job</h1>
+        <p class="sub">Candidates will be matched with this job automatically based on skills.</p>
+
+        <div class="panel">
+            <div id="msg" class="msg"></div>
+
+            <form id="jobForm">
+                <div class="form-group">
+                    <label for="title">Job title</label>
+                    <input type="text" id="title" placeholder="e.g. Data Analyst" maxlength="100" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="company">Company</label>
+                        <input type="text" id="company" placeholder="Your company name" maxlength="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" placeholder="e.g. Bengaluru or Remote" maxlength="100" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="experience">Experience required</label>
+                    <select id="experience">
+                        <option value="Fresher (0-1 yrs)">Fresher (0-1 yrs)</option>
+                        <option value="1-3 yrs">1-3 yrs</option>
+                        <option value="3-5 yrs">3-5 yrs</option>
+                        <option value="5-10 yrs">5-10 yrs</option>
+                        <option value="10+ yrs">10+ yrs</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="skills">Required skills</label>
+                    <input type="text" id="skills" placeholder="Python, SQL, Pandas, Power BI" required>
+                    <p class="field-hint">Separate skills with commas. Skills mentioned in the description are added automatically.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Job description</label>
+                    <textarea id="description" rows="7" placeholder="Describe the role, responsibilities and requirements..." maxlength="5000" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">Post Job</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        const msg = document.getElementById("msg");
+        const submitBtn = document.getElementById("submitBtn");
+
+        document.getElementById("jobForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const body = {
+                title: document.getElementById("title").value,
+                company: document.getElementById("company").value,
+                location: document.getElementById("location").value,
+                experience: document.getElementById("experience").value,
+                skills: document.getElementById("skills").value,
+                description: document.getElementById("description").value
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Posting...";
+
+            try {
+                const res = await fetch("/api/recruiter/jobs", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msg.className = "msg msg-success";
+                    msg.textContent = "Job posted! Skills detected: " + data.skills.join(", ") + ". Redirecting...";
+                    setTimeout(function () { window.location.href = "/my_jobs.html"; }, 1500);
+                    return;
+                }
+                msg.className = "msg msg-error";
+                msg.textContent = data.error;
+            } catch (err) {
+                msg.className = "msg msg-error";
+                msg.textContent = "Something went wrong. Please try again.";
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Post Job";
+        });
+
+        loadUser();
+    </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recommended Jobs | HireMate</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#f4f6fb;margin:0;color:#222}
+  .wrap{max-width:900px;margin:30px auto;padding:0 16px}
+  a.back{color:#4b36b8;text-decoration:none}
+  .card{background:#fff;border-radius:12px;padding:18px;margin:14px 0;
+        box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;gap:16px}
+  .score{min-width:68px;height:68px;border-radius:50%;display:flex;align-items:center;
+         justify-content:center;font-weight:700;font-size:20px;color:#fff}
+  .info{flex:1}
+  .info h3{margin:0 0 4px}
+  .info h3 a{color:#222;text-decoration:none}
+  .meta{color:#666;font-size:14px;margin-bottom:8px}
+  .chip{display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px;margin:2px}
+  .ok{background:#d9f5e3;color:#116b35}
+  .miss{background:#fde2e2;color:#9b1c1c}
+  .badge{background:#e8e4ff;color:#4b36b8;padding:2px 8px;border-radius:10px;font-size:12px}
+  .label{font-size:13px;color:#555;margin-top:6px}
+  .actions{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{background:#4b36b8;color:#fff;border:0;padding:8px 18px;border-radius:8px;font-size:14px;cursor:pointer}
+  button:disabled{background:#aaa;cursor:default}
+  a.mailBtn{border:1px solid #4b36b8;color:#4b36b8;padding:7px 16px;border-radius:8px;font-size:14px;text-decoration:none}
+  a.detailBtn{color:#4b36b8;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="seeker_dashboard.html">&larr; Dashboard</a>
+  <h1>Recommended Jobs</h1>
+  <p id="status">Finding your best matches...</p>
+  <div id="list"></div>
+</div>
+<script>
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function color(n){return n>=60?'#22a35a':(n>=35?'#e8912d':'#d64545');}
+let me={name:'',email:''};
+fetch('/api/me').then(r=>r.json()).then(u=>{me=u;});
+
+function mailLink(j){
+  const subject='Application for '+j.title+' - '+j.company;
+  const body='Hello,\n\nI would like to apply for the '+j.title+' position at '+j.company+
+             '.\nMy resume is attached.\n\nRegards,\n'+me.name+'\n'+me.email;
+  return 'mailto:'+j.contact_email+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+}
+
+fetch('/api/seeker/recommended').then(r=>r.json()).then(data=>{
+  const status=document.getElementById('status');
+  if(!data.uploaded){
+    status.innerHTML='Pehle <a href="upload_resume.html">resume upload</a> karo.';
+    return;
+  }
+  status.textContent='Top '+data.jobs.length+' matches (skills + TF-IDF similarity)';
+  document.getElementById('list').innerHTML=data.jobs.map(j=>`
+    <div class="card">
+      <div class="score" style="background:${color(j.score)}">${j.score}%</div>
+      <div class="info">
+        <h3><a href="job_detail.html?id=${j.id}">${esc(j.title)}</a>
+          ${j.source==='recruiter'?'<span class="badge">Posted on HireMate</span>':''}</h3>
+        <div class="meta">${esc(j.company)} &bull; ${esc(j.location)} &bull; ${esc(j.experience)}</div>
+        <div class="label">You have:</div>
+        ${j.matched.map(s=>`<span class="chip ok">${esc(s)}</span>`).join('')||'<span class="meta">-</span>'}
+        <div class="label">Missing:</div>
+        ${j.missing.slice(0,6).map(s=>`<span class="chip miss">${esc(s)}</span>`).join('')||'<span class="meta">Nothing missing</span>'}
+        <div class="actions">
+          <button class="applyBtn" data-id="${j.id}" ${j.applied?'disabled':''}>${j.applied?'Applied \u2713':'Apply'}</button>
+          ${j.contact_email?`<a class="mailBtn" href="${esc(mailLink(j))}">\u2709 Email recruiter</a>`:''}
+          <a class="detailBtn" href="job_detail.html?id=${j.id}">View details</a>
+        </div>
+      </div>
+    </div>`).join('');
+}).catch(()=>{document.getElementById('status').textContent='Something went wrong.';});
+
+document.getElementById('list').addEventListener('click',e=>{
+  const btn=e.target.closest('.applyBtn');
+  if(!btn||btn.disabled)return;
+  btn.disabled=true;
+  fetch('/api/apply',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:Number(btn.dataset.id)})}).then(r=>r.json()).then(d=>{
+    if(d.message){btn.textContent='Applied \u2713';}
+    else{alert(d.error);btn.disabled=false;}
+  });
+});
+</script>
+</body>
+</html>

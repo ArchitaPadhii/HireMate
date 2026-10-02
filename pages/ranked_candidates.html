@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ranked Candidates | HireMate</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#f4f6fb;margin:0;color:#222}
+  .wrap{max-width:900px;margin:30px auto;padding:0 16px}
+  a.back{color:#4b36b8;text-decoration:none}
+  select{padding:9px;border-radius:8px;border:1px solid #ccc;width:100%;max-width:420px;font-size:15px}
+  .card{background:#fff;border-radius:12px;padding:16px;margin:12px 0;
+        box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;gap:16px;align-items:center}
+  .rank{font-weight:700;color:#999;width:28px}
+  .score{min-width:60px;height:60px;border-radius:50%;display:flex;align-items:center;
+         justify-content:center;font-weight:700;color:#fff}
+  .info{flex:1}
+  .info h3{margin:0}
+  .meta{color:#666;font-size:14px}
+  .chip{display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px;margin:2px}
+  .ok{background:#d9f5e3;color:#116b35}
+  .miss{background:#fde2e2;color:#9b1c1c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="recruiter_dashboard.html">&larr; Dashboard</a>
+  <h1>Ranked Candidates</h1>
+  <select id="jobSelect"><option value="">Select a job...</option></select>
+  <p id="status"></p>
+  <div id="list"></div>
+</div>
+<script>
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function color(n){return n>=60?'#22a35a':(n>=35?'#e8912d':'#d64545');}
+const select=document.getElementById('jobSelect');
+const status=document.getElementById('status');
+
+function load(jobId){
+  if(!jobId){document.getElementById('list').innerHTML='';status.textContent='';return;}
+  status.textContent='Ranking candidates...';
+  fetch('/api/recruiter/candidates?job_id='+jobId).then(r=>r.json()).then(data=>{
+    if(data.error){status.textContent=data.error;return;}
+    if(!data.candidates.length){status.textContent='Abhi koi seeker ne resume upload nahi kiya.';
+      document.getElementById('list').innerHTML='';return;}
+    status.textContent=data.candidates.length+' candidates for "'+data.job.title+'"';
+    document.getElementById('list').innerHTML=data.candidates.map((c,i)=>`
+      <div class="card">
+        <div class="rank">#${i+1}</div>
+        <div class="score" style="background:${color(c.score)}">${c.score}%</div>
+        <div class="info">
+          <h3>${esc(c.name)}</h3>
+          <div class="meta">${esc(c.email)}</div>
+          ${c.matched.map(s=>`<span class="chip ok">${esc(s)}</span>`).join('')}
+          ${c.missing.map(s=>`<span class="chip miss">${esc(s)}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  });
+}
+
+fetch('/api/recruiter/jobs').then(r=>r.json()).then(data=>{
+  (data.jobs||[]).forEach(j=>{
+    const o=document.createElement('option');
+    o.value=j.id; o.textContent=j.title+' - '+j.company;
+    select.appendChild(o);
+  });
+  const fromUrl=new URLSearchParams(location.search).get('job_id');
+  if(fromUrl){select.value=fromUrl;load(fromUrl);}
+});
+select.addEventListener('change',()=>load(select.value));
+</script>
+</body>
+</html>

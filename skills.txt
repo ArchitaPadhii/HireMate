@@ -1,0 +1,104 @@
+Python
+Java
+JavaScript
+TypeScript
+C++
+C#
+PHP
+Kotlin
+Swift
+SQL
+HTML
+CSS
+Bash
+React
+Angular
+Vue
+Node.js
+Express.js
+Django
+Flask
+FastAPI
+Spring Boot
+Bootstrap
+Tailwind CSS
+jQuery
+REST API
+Pandas
+NumPy
+Matplotlib
+Seaborn
+Excel
+Power BI
+Tableau
+Data Analysis
+Data Visualization
+Data Cleaning
+Statistics
+ETL
+Machine Learning
+Deep Learning
+scikit-learn
+TensorFlow
+Keras
+PyTorch
+Natural Language Processing
+NLTK
+spaCy
+OpenCV
+Computer Vision
+Feature Engineering
+MySQL
+PostgreSQL
+MongoDB
+SQLite
+Oracle
+Firebase
+Redis
+Git
+GitHub
+Docker
+Kubernetes
+AWS
+Azure
+Google Cloud
+Linux
+Jenkins
+CI/CD
+Jira
+Postman
+Data Structures
+Algorithms
+OOP
+DBMS
+Operating Systems
+Computer Networks
+Problem Solving
+Communication
+Teamwork
+Leadership
+Hadoop
+Spark
+Hive
+Scala
+SAS
+SPSS
+MATLAB
+Big Data
+Data Mining
+Data Engineering
+Data Warehousing
+Predictive Modeling
+Regression
+Time Series
+A/B Testing
+Business Intelligence
+Looker
+Snowflake
+BigQuery
+Airflow
+Kafka
+Neural Networks
+Generative AI
+LLM
+MLOps

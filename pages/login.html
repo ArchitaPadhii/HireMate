@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/register.html" class="btn btn-outline btn-sm">Register</a>
+        </div>
+    </nav>
+
+    <div class="auth-wrap">
+        <div class="auth-box">
+            <h2>Welcome back</h2>
+            <p class="sub">Login to continue to your dashboard.</p>
+
+            <div id="msg" class="msg"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+
+            <p class="auth-switch">New to HireMate? <a href="/register.html">Create an account</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const msg = document.getElementById("msg");
+
+            const body = {
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            };
+
+            const res = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                if (data.role === "recruiter") {
+                    window.location.href = "/recruiter_dashboard.html";
+                } else {
+                    window.location.href = "/seeker_dashboard.html";
+                }
+            } else {
+                msg.className = "msg msg-error";
+                msg.textContent = data.error;
+            }
+        });
+    </script>
+</body>
+</html>

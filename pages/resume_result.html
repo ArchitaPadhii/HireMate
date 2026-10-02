@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analysis | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/seeker_dashboard.html" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/seeker_dashboard.html">Dashboard</a>
+            <a href="/upload_resume.html">Upload Resume</a>
+            <a href="/resume_result.html" class="active">Resume Analysis</a>
+            <a href="/browse_jobs.html">Browse Jobs</a>
+            <a href="/recommended_jobs.html">Recommended Jobs</a>
+            <span class="user-chip" id="userName"></span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dash">
+        <h1>Resume Analysis</h1>
+        <p class="sub" id="fileLine">Loading your analysis...</p>
+
+        <!-- Shown when no resume is uploaded -->
+        <div class="panel" id="emptyPanel" style="display: none;">
+            <h3>No resume uploaded yet</h3>
+            <p class="sub">Upload your PDF resume to see your score, skills and missing skills.</p>
+            <a href="/upload_resume.html" class="btn btn-primary">Upload Resume</a>
+        </div>
+
+        <div id="content" style="display: none;">
+
+            <!-- Score + breakdown -->
+            <div class="panel score-panel">
+                <div class="score-box">
+                    <div class="score-number" id="scoreNumber">0</div>
+                    <div class="score-out">out of 100</div>
+                    <div class="score-label" id="scoreLabel"></div>
+                </div>
+                <div class="breakdown" id="breakdown"></div>
+            </div>
+
+            <!-- Skills found -->
+            <div class="panel">
+                <h3 id="skillsTitle">Skills found</h3>
+                <div class="chips chips-gap" id="skillsList"></div>
+            </div>
+
+            <!-- Target role + missing skills -->
+            <div class="panel">
+                <h3>Skill gap for a target role</h3>
+                <p class="sub">Pick a role to see which skills you already have and which ones are missing.</p>
+
+                <div class="form-group role-select">
+                    <label for="roleSelect">Target role</label>
+                    <select id="roleSelect"></select>
+                </div>
+
+                <div class="role-score">
+                    <span>Match with this role</span>
+                    <strong id="roleMatch">0%</strong>
+                </div>
+                <div class="bar"><div class="bar-fill" id="roleBar" style="width: 0%"></div></div>
+
+                <p class="preview-label">Skills you have</p>
+                <div class="chips chips-gap" id="matchedList"></div>
+
+                <p class="preview-label">Missing skills (learn these next)</p>
+                <div class="chips chips-gap" id="missingList"></div>
+            </div>
+
+            <!-- All roles -->
+            <div class="panel">
+                <h3>How you match all roles</h3>
+                <div id="allRoles"></div>
+            </div>
+
+            <!-- Tips -->
+            <div class="panel" id="tipsPanel" style="display: none;">
+                <h3>Tips to improve your resume</h3>
+                <ul class="tips" id="tipsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        let analysis = null;
+
+        function makeChips(container, items, cssClass, emptyText) {
+            container.innerHTML = "";
+            if (items.length === 0) {
+                const p = document.createElement("span");
+                p.className = "muted-text";
+                p.textContent = emptyText;
+                container.appendChild(p);
+                return;
+            }
+            items.forEach(function (item) {
+                const chip = document.createElement("span");
+                chip.className = "chip " + cssClass;
+                chip.textContent = item;
+                container.appendChild(chip);
+            });
+        }
+
+        function renderRole(roleName) {
+            const role = analysis.roles.find(function (r) { return r.role === roleName; });
+            document.getElementById("roleMatch").textContent = role.match + "%";
+            document.getElementById("roleBar").style.width = role.match + "%";
+            makeChips(document.getElementById("matchedList"), role.matched, "chip-ok",
+                      "None of the required skills found yet.");
+            makeChips(document.getElementById("missingList"), role.missing, "chip-miss",
+                      "Nothing missing. You have all the key skills for this role!");
+        }
+
+        function render() {
+            // Score
+            document.getElementById("scoreNumber").textContent = analysis.score;
+            let label = "Needs work";
+            if (analysis.score >= 80) label = "Strong resume";
+            else if (analysis.score >= 60) label = "Good, can improve";
+            document.getElementById("scoreLabel").textContent = label;
+            document.getElementById("fileLine").textContent =
+                analysis.filename + "  |  " + analysis.word_count + " words";
+
+            // Breakdown bars
+            const breakdown = document.getElementById("breakdown");
+            breakdown.innerHTML = "";
+            analysis.breakdown.forEach(function (item) {
+                const row = document.createElement("div");
+                row.className = "bd-row";
+
+                const top = document.createElement("div");
+                top.className = "bd-top";
+                const name = document.createElement("span");
+                name.textContent = item.name;
+                const pts = document.createElement("strong");
+                pts.textContent = item.points + " / " + item.max;
+                top.appendChild(name);
+                top.appendChild(pts);
+
+                const bar = document.createElement("div");
+                bar.className = "bar";
+                const fill = document.createElement("div");
+                fill.className = "bar-fill";
+                fill.style.width = Math.round(item.points * 100 / item.max) + "%";
+                bar.appendChild(fill);
+
+                row.appendChild(top);
+                row.appendChild(bar);
+                breakdown.appendChild(row);
+            });
+
+            // Skills
+            document.getElementById("skillsTitle").textContent =
+                "Skills found (" + analysis.skills.length + ")";
+            makeChips(document.getElementById("skillsList"), analysis.skills, "",
+                      "No skills detected. Add a Skills section to your resume.");
+
+            // Role dropdown (best role is first)
+            const select = document.getElementById("roleSelect");
+            select.innerHTML = "";
+            analysis.roles.forEach(function (r) {
+                const opt = document.createElement("option");
+                opt.value = r.role;
+                opt.textContent = r.role + " (" + r.match + "% match)";
+                select.appendChild(opt);
+            });
+            select.addEventListener("change", function () { renderRole(select.value); });
+            renderRole(analysis.roles[0].role);
+
+            // All roles list
+            const all = document.getElementById("allRoles");
+            all.innerHTML = "";
+            analysis.roles.forEach(function (r) {
+                const row = document.createElement("div");
+                row.className = "bd-row";
+
+                const top = document.createElement("div");
+                top.className = "bd-top";
+                const name = document.createElement("span");
+                name.textContent = r.role;
+                const pct = document.createElement("strong");
+                pct.textContent = r.match + "%";
+                top.appendChild(name);
+                top.appendChild(pct);
+
+                const bar = document.createElement("div");
+                bar.className = "bar";
+                const fill = document.createElement("div");
+                fill.className = "bar-fill";
+                fill.style.width = r.match + "%";
+                bar.appendChild(fill);
+
+                row.appendChild(top);
+                row.appendChild(bar);
+                all.appendChild(row);
+            });
+
+            // Tips
+            if (analysis.tips.length > 0) {
+                document.getElementById("tipsPanel").style.display = "block";
+                const list = document.getElementById("tipsList");
+                list.innerHTML = "";
+                analysis.tips.forEach(function (tip) {
+                    const li = document.createElement("li");
+                    li.textContent = tip;
+                    list.appendChild(li);
+                });
+            }
+        }
+
+        async function init() {
+            const user = await loadUser();
+            if (!user) return;
+
+            const res = await fetch("/api/seeker/analysis");
+            analysis = await res.json();
+
+            if (!analysis.uploaded) {
+                document.getElementById("fileLine").textContent = "No resume found.";
+                document.getElementById("emptyPanel").style.display = "block";
+                return;
+            }
+
+            document.getElementById("content").style.display = "block";
+            render();
+        }
+        init();
+    </script>
+</body>
+</html>

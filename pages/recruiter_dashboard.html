@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter Dashboard | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/recruiter_dashboard.html" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/recruiter_dashboard.html" class="active">Dashboard</a>
+            <a href="/post_job.html">Post a Job</a>
+            <a href="/my_jobs.html">My Jobs</a>
+            <span class="user-chip" id="userName"></span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dash">
+        <div class="welcome-banner">
+            <h1 id="welcome">Welcome</h1>
+            <p id="statusLine">Loading your dashboard...</p>
+        </div>
+
+        <div class="stats stats-2">
+            <div class="stat">
+                <div class="label">Jobs Posted</div>
+                <div class="value" id="statJobs">-</div>
+            </div>
+            <div class="stat">
+                <div class="label">Candidates on Platform</div>
+                <div class="value" id="statCandidates">-</div>
+            </div>
+        </div>
+
+        <h2 class="section-heading">Quick actions</h2>
+        <div class="dash-cards">
+            <a href="/post_job.html" class="action-card">
+                <div class="icon">📝</div>
+                <h3>Post a Job</h3>
+                <p>Add a job with skills, experience and description.</p>
+            </a>
+            <a href="/my_jobs.html" class="action-card">
+                <div class="icon">💼</div>
+                <h3>My Jobs</h3>
+                <p>See all the jobs you have posted.</p>
+            </a>
+            <a href="/my_jobs.html" class="action-card">
+                <div class="icon">🏆</div>
+                <h3>Ranked Candidates</h3>
+                <p>Pick a job and see the best-fit candidates.</p>
+            </a>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        async function init() {
+            const user = await loadUser();
+            if (!user) return;
+            document.getElementById("welcome").textContent = "Welcome, " + user.name;
+
+            const res = await fetch("/api/recruiter/stats");
+            const stats = await res.json();
+
+            document.getElementById("statJobs").textContent = stats.jobs_posted;
+            document.getElementById("statCandidates").textContent = stats.candidates;
+
+            if (stats.jobs_posted === 0) {
+                document.getElementById("statusLine").textContent =
+                    "Get started by posting your first job.";
+            } else {
+                document.getElementById("statusLine").textContent =
+                    "Manage your jobs and review ranked candidates.";
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

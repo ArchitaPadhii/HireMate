@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Jobs | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/recruiter_dashboard.html" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/recruiter_dashboard.html">Dashboard</a>
+            <a href="/post_job.html">Post a Job</a>
+            <a href="/my_jobs.html" class="active">My Jobs</a>
+            <span class="user-chip" id="userName"></span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dash">
+        <div class="page-head">
+            <div>
+                <h1>My Jobs</h1>
+                <p class="sub" id="countLine">Loading...</p>
+            </div>
+            <a href="/post_job.html" class="btn btn-primary btn-sm">+ Post a Job</a>
+        </div>
+
+        <div id="emptyPanel" class="panel" style="display: none;">
+            <h3>You have not posted any jobs yet</h3>
+            <p class="sub">Post your first job and candidates can be matched with it.</p>
+            <a href="/post_job.html" class="btn btn-primary">Post a Job</a>
+        </div>
+
+        <div id="jobList"></div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        function makeJobCard(job) {
+            const card = document.createElement("div");
+            card.className = "job-card";
+
+            const head = document.createElement("div");
+            head.className = "job-head";
+
+            const left = document.createElement("div");
+            const title = document.createElement("h3");
+            title.textContent = job.title;
+            const meta = document.createElement("p");
+            meta.className = "job-meta";
+            meta.textContent = job.company + "  |  " + job.location + "  |  " + job.experience;
+            left.appendChild(title);
+            left.appendChild(meta);
+
+            const del = document.createElement("button");
+            del.className = "btn btn-danger btn-sm";
+            del.textContent = "Delete";
+            del.addEventListener("click", function () { deleteJob(job.id, job.title); });
+
+            head.appendChild(left);
+            head.appendChild(del);
+            card.appendChild(head);
+
+            const chips = document.createElement("div");
+            chips.className = "chips chips-gap";
+            job.skills.forEach(function (skill) {
+                const chip = document.createElement("span");
+                chip.className = "chip";
+                chip.textContent = skill;
+                chips.appendChild(chip);
+            });
+            card.appendChild(chips);
+
+            const desc = document.createElement("p");
+            desc.className = "job-desc";
+            desc.textContent = job.description;
+            card.appendChild(desc);
+
+            const posted = document.createElement("p");
+            posted.className = "job-posted";
+            posted.textContent = "Posted: " + job.created_at;
+            card.appendChild(posted);
+
+            return card;
+        }
+
+        async function deleteJob(id, title) {
+            if (!confirm("Delete the job \"" + title + "\"?")) return;
+            await fetch("/api/recruiter/jobs/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id })
+            });
+            loadJobs();
+        }
+
+        async function loadJobs() {
+            const res = await fetch("/api/recruiter/jobs");
+            const data = await res.json();
+
+            const list = document.getElementById("jobList");
+            list.innerHTML = "";
+
+            if (data.jobs.length === 0) {
+                document.getElementById("countLine").textContent = "No jobs posted yet.";
+                document.getElementById("emptyPanel").style.display = "block";
+                return;
+            }
+
+            document.getElementById("emptyPanel").style.display = "none";
+            document.getElementById("countLine").textContent =
+                data.jobs.length + (data.jobs.length === 1 ? " job posted" : " jobs posted");
+            data.jobs.forEach(function (job) { list.appendChild(makeJobCard(job)); });
+        }
+
+        loadUser();
+        loadJobs();
+    </script>
+</body>
+</html>

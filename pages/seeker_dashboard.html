@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Seeker Dashboard | HireMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/seeker_dashboard.html" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="/seeker_dashboard.html" class="active">Dashboard</a>
+            <a href="/upload_resume.html">Upload Resume</a>
+            <a href="/browse_jobs.html">Browse Jobs</a>
+            <a href="/recommended_jobs.html">Recommended Jobs</a>
+            <span class="user-chip" id="userName"></span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dash">
+        <div class="welcome-banner">
+            <h1 id="welcome">Welcome</h1>
+            <p id="statusLine">Loading your dashboard...</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="label">Resume Score</div>
+                <div class="value" id="statScore">-</div>
+            </div>
+            <div class="stat">
+                <div class="label">Skills Found</div>
+                <div class="value" id="statSkills">-</div>
+            </div>
+            <div class="stat">
+                <div class="label">Jobs Available</div>
+                <div class="value" id="statJobs">-</div>
+            </div>
+        </div>
+
+        <h2 class="section-heading">Quick actions</h2>
+        <div class="dash-cards">
+            <a href="/upload_resume.html" class="action-card">
+                <div class="icon">📄</div>
+                <h3>Upload Resume</h3>
+                <p>Upload your PDF resume for instant AI analysis.</p>
+            </a>
+            <a href="/resume_result.html" class="action-card">
+                <div class="icon">📊</div>
+                <h3>Resume Analysis</h3>
+                <p>View your score, skills and missing skills.</p>
+            </a>
+            <a href="/recommended_jobs.html" class="action-card">
+                <div class="icon">🎯</div>
+                <h3>Recommended Jobs</h3>
+                <p>See the jobs that best match your profile.</p>
+            </a>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        async function init() {
+            const user = await loadUser();
+            if (!user) return;
+            document.getElementById("welcome").textContent = "Welcome, " + user.name;
+
+            const res = await fetch("/api/seeker/stats");
+            const stats = await res.json();
+
+            document.getElementById("statJobs").textContent = stats.jobs_available;
+
+            if (stats.resume_uploaded) {
+                if (stats.score !== null) {
+                    document.getElementById("statScore").innerHTML = stats.score + "<small>/100</small>";
+                } else {
+                    document.getElementById("statScore").textContent = "Pending";
+                }
+                document.getElementById("statSkills").textContent = stats.skills_count;
+                document.getElementById("statusLine").textContent =
+                    "Your resume is analyzed. Open Resume Analysis to see your score and skill gaps.";
+            } else {
+                document.getElementById("statusLine").textContent =
+                    "Get started by uploading your resume.";
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

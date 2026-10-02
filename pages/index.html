@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireMate | AI Resume Analyzer & Job Matching</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="logo">Hire<span>Mate</span></a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="/login.html">Login</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Register</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-text">
+            <span class="badge">AI-Powered Hiring Platform</span>
+            <h1>Land the right job.<br>Hire the right talent.</h1>
+            <p>HireMate analyzes resumes, finds skill gaps and matches candidates with jobs
+               using AI. Instant, transparent and fair for both sides.</p>
+            <div class="hero-buttons">
+                <a href="/register.html?role=seeker" class="btn btn-primary">I'm a Job Seeker</a>
+                <a href="/register.html?role=recruiter" class="btn btn-outline">I'm a Recruiter</a>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="mock-card">
+                <div class="mock-top">
+                    <div>
+                        <p class="mock-label">Resume Score</p>
+                        <h2 class="mock-score">82<span>/100</span></h2>
+                    </div>
+                    <div class="mock-ring">A</div>
+                </div>
+                <div class="bar"><div class="bar-fill" style="width: 82%"></div></div>
+
+                <p class="mock-label">Skills found</p>
+                <div class="chips">
+                    <span class="chip">Python</span>
+                    <span class="chip">SQL</span>
+                    <span class="chip">Pandas</span>
+                    <span class="chip">Git</span>
+                </div>
+
+                <p class="mock-label">Missing skills</p>
+                <div class="chips">
+                    <span class="chip chip-miss">Docker</span>
+                    <span class="chip chip-miss">AWS</span>
+                </div>
+
+                <div class="mock-match">
+                    <span>Best match: Data Analyst</span>
+                    <strong>91%</strong>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- HIGHLIGHTS -->
+    <section class="strip">
+        <div><strong>Instant</strong><span>Resume analysis</span></div>
+        <div><strong>Two-way</strong><span>Job &amp; candidate matching</span></div>
+        <div><strong>Transparent</strong><span>Scores with reasons</span></div>
+        <div><strong>Actionable</strong><span>Skill gap insights</span></div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section" id="features">
+        <h2 class="section-title">Everything you need to hire and get hired</h2>
+        <p class="section-sub">One platform, two dashboards, one smart matching engine.</p>
+
+        <div class="grid-3">
+            <div class="feature">
+                <div class="icon">📄</div>
+                <h3>Resume Analysis</h3>
+                <p>Upload a PDF and get extracted skills, experience and an overall resume score.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🎯</div>
+                <h3>Smart Job Matching</h3>
+                <p>Skills plus TF-IDF and cosine similarity find the jobs that truly fit your profile.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📈</div>
+                <h3>Skill Gap Insights</h3>
+                <p>See exactly which in-demand skills you are missing for your target role.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📝</div>
+                <h3>Easy Job Posting</h3>
+                <p>Recruiters add skills, experience and a description in under a minute.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🏆</div>
+                <h3>Ranked Candidates</h3>
+                <p>Applicants are ranked automatically, so there is no need to read every resume.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🔍</div>
+                <h3>No Black Box</h3>
+                <p>Every match score comes with matched skills and clear reasons.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section section-alt" id="how">
+        <h2 class="section-title">How it works</h2>
+        <p class="section-sub">Three simple steps.</p>
+
+        <div class="grid-3">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Create your account</h3>
+                <p>Sign up as a Job Seeker or a Recruiter and get your own dashboard.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Upload or post</h3>
+                <p>Seekers upload a resume. Recruiters post a job with the required skills.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Get matched</h3>
+                <p>Our engine scores every match and shows the best results instantly.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- TWO ROLES -->
+    <section class="section">
+        <div class="grid-2">
+            <div class="role-card">
+                <h3>For Job Seekers</h3>
+                <ul>
+                    <li>Instant resume score</li>
+                    <li>Missing skills highlighted</li>
+                    <li>Personalized job recommendations</li>
+                </ul>
+                <a href="/register.html?role=seeker" class="btn btn-primary">Join as Job Seeker</a>
+            </div>
+            <div class="role-card role-dark">
+                <h3>For Recruiters</h3>
+                <ul>
+                    <li>Post jobs in minutes</li>
+                    <li>Automatically ranked candidates</li>
+                    <li>Less time on manual screening</li>
+                </ul>
+                <a href="/register.html?role=recruiter" class="btn btn-light">Join as Recruiter</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <h3 class="logo">Hire<span>Mate</span></h3>
+        <p>AI-Based Resume Analyzer &amp; Job Recommendation Platform</p>
+        <p class="footer-small">Built by Harshita Markam, Vinay Anand and Archita Padhi</p>
+    </footer>
+
+</body>
+</html>
