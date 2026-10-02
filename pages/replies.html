@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Company Replies | HireMate</title>
+<link rel="stylesheet" href="/static/hm.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="seeker_dashboard.html">&larr; Dashboard</a>
+  <h1>Company Replies</h1>
+  <p id="info"></p>
+  <div id="list"></div>
+</div>
+<script src="/static/apply.js"></script>
+<script>
+fetch('/api/seeker/applications').then(r => r.json()).then(d => {
+  const all = d.applications || [];
+  const replied = all.filter(a => a.status !== 'pending')
+                     .sort((a, b) => (b.replied_at || '').localeCompare(a.replied_at || ''));
+  const waiting = all.filter(a => a.status === 'pending' && a.source === 'recruiter').length;
+  document.getElementById('info').innerHTML =
+    replied.length + ' repl' + (replied.length === 1 ? 'y' : 'ies') + ' received &bull; ' +
+    waiting + ' waiting (<a href="my_applications.html">see all applications</a>)';
+  if (!replied.length) {
+    document.getElementById('list').innerHTML = '<div class="empty">No replies yet!! <a href="my_applications.html">See all applications</a></div>';
+    return;
+  }
+  document.getElementById('list').innerHTML = replied.map(a => `
+    <div class="card">
+      <div class="top">
+        <div>
+          <h3><a href="job_detail.html?id=${a.job_id}">${escapeHtml(a.title)}</a></h3>
+          <div class="meta">${escapeHtml(a.company)} &bull; Replied on ${escapeHtml((a.replied_at || '').slice(0, 10))}</div>
+        </div>
+        <span class="status ${a.status}">${a.status === 'accepted' ? 'Accepted \u2713' : 'Rejected'}</span>
+      </div>
+      <div class="reply">${escapeHtml(a.reply_message)}</div>
+    </div>`).join('');
+});
+</script>
+</body>
+</html>

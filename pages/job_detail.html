@@ -4,23 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Details | HireMate</title>
+<link rel="stylesheet" href="/static/hm.css">
 <style>
-  body{font-family:Segoe UI,Arial,sans-serif;background:#f4f6fb;margin:0;color:#222}
-  .wrap{max-width:820px;margin:30px auto;padding:0 16px}
-  a.back{color:#4b36b8;text-decoration:none}
-  .box{background:#fff;border-radius:12px;padding:22px;margin:14px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-  h1{margin:0 0 6px}
-  .meta{color:#666;margin-bottom:10px}
-  .chip{display:inline-block;padding:3px 10px;border-radius:12px;font-size:13px;margin:2px;background:#eceef5}
-  .ok{background:#d9f5e3;color:#116b35}
-  .miss{background:#fde2e2;color:#9b1c1c}
-  .badge{background:#e8e4ff;color:#4b36b8;padding:2px 8px;border-radius:10px;font-size:12px}
   .desc{white-space:pre-wrap;line-height:1.55}
-  .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  button{background:#4b36b8;color:#fff;border:0;padding:12px 28px;border-radius:8px;font-size:16px;cursor:pointer}
-  button:disabled{background:#999;cursor:default}
-  a.mailBtn{border:1px solid #4b36b8;color:#4b36b8;padding:11px 22px;border-radius:8px;font-size:16px;text-decoration:none}
-  .bigscore{font-size:34px;font-weight:700}
+  .bigscore{font-size:32px;font-weight:700}
 </style>
 </head>
 <body>
@@ -28,70 +15,51 @@
   <a class="back" id="back" href="browse_jobs.html">&larr; Back</a>
   <div id="content"><p>Loading...</p></div>
 </div>
+<script src="/static/apply.js"></script>
 <script>
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function color(n){return n>=60?'#22a35a':(n>=35?'#e8912d':'#d64545');}
-const jobId=new URLSearchParams(window.location.search).get('id');
-const content=document.getElementById('content');
-let me={name:'',email:''};
+function color(n) { return n >= 60 ? '#22a35a' : (n >= 35 ? '#e8912d' : '#d64545'); }
+const jobId = new URLSearchParams(window.location.search).get('id');
+const content = document.getElementById('content');
 
-function mailLink(j){
-  const subject='Application for '+j.title+' - '+j.company;
-  const body='Hello,\n\nI would like to apply for the '+j.title+' position at '+j.company+
-             '.\nMy resume is attached.\n\nRegards,\n'+me.name+'\n'+me.email;
-  return 'mailto:'+j.contact_email+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-}
+function load() {
+  fetch('/api/job?id=' + encodeURIComponent(jobId)).then(r => {
+    if (r.status === 401) { window.location.href = 'login.html'; return null; }
+    return r.json();
+  }).then(j => {
+    if (!j) return;
+    if (j.error) { content.innerHTML = '<p>' + escapeHtml(j.error) + '</p>'; return; }
+    if (j.role === 'recruiter') document.getElementById('back').href = 'my_jobs.html';
 
-fetch('/api/me').then(r=>r.json()).then(u=>{me=u;}).finally(()=>{
-fetch('/api/job?id='+encodeURIComponent(jobId)).then(r=>{
-  if(r.status===401){window.location.href='login.html';return null;}
-  return r.json();
-}).then(j=>{
-  if(!j)return;
-  if(j.error){content.innerHTML='<p>'+esc(j.error)+'</p>';return;}
-  if(j.role==='recruiter')document.getElementById('back').href='my_jobs.html';
-
-  let html=`<div class="box">
-    <h1>${esc(j.title)}</h1>
-    <div class="meta">${esc(j.company)} &bull; ${esc(j.location)} &bull; ${esc(j.experience)}
-      ${j.source==='recruiter'?'<span class="badge">Posted on HireMate</span>':''}</div>
-    ${j.skills.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}
-  </div>`;
-
-  if(j.match){
-    html+=`<div class="box">
-      <div class="bigscore" style="color:${color(j.match.score)}">${j.match.score}% match</div>
-      <div>You have:</div>
-      ${j.match.matched.map(s=>`<span class="chip ok">${esc(s)}</span>`).join('')||'-'}
-      <div style="margin-top:8px">Missing:</div>
-      ${j.match.missing.map(s=>`<span class="chip miss">${esc(s)}</span>`).join('')||'Nothing missing'}
+    let html = `<div class="card">
+      <h1>${escapeHtml(j.title)}</h1>
+      <div class="meta">${escapeHtml(j.company)} &bull; ${escapeHtml(j.location)} &bull; ${escapeHtml(j.experience)}
+        ${j.source === 'recruiter' ? '<span class="badge">Posted on HireMate</span>' : ''}</div>
+      ${j.skills.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('')}
     </div>`;
-  }
 
-  html+=`<div class="box"><h3>Job description</h3><div class="desc">${esc(j.description)}</div></div>`;
+    if (j.match) {
+      const missing = !j.skills.length ? '<span class="meta">No skills listed in this job</span>'
+        : (!j.match.missing.length ? '<span class="chip ok">You have all listed skills \u2713</span>'
+        : j.match.missing.map(s => `<span class="chip miss">${escapeHtml(s)}</span>`).join(''));
+      html += `<div class="card">
+        <div class="bigscore" style="color:${color(j.match.score)}">${j.match.score}% match</div>
+        <div class="label">You have:</div>
+        ${j.match.matched.map(s => `<span class="chip ok">${escapeHtml(s)}</span>`).join('') || '-'}
+        <div class="label">Missing:</div>
+        ${missing}
+      </div>`;
+    }
 
-  if(j.role==='seeker'){
-    html+=`<div class="actions">
-             <button id="applyBtn" ${j.applied?'disabled':''}>${j.applied?'Applied \u2713':'Apply Now'}</button>
-             ${j.contact_email?`<a class="mailBtn" href="${esc(mailLink(j))}">\u2709 Email recruiter</a>`:''}
-           </div>
-           <p id="msg"></p>`;
-  }
-  content.innerHTML=html;
+    html += `<div class="card"><h3>Job description</h3><div class="desc">${escapeHtml(j.description)}</div></div>`;
 
-  const btn=document.getElementById('applyBtn');
-  if(btn&&!j.applied){
-    btn.addEventListener('click',()=>{
-      btn.disabled=true;
-      fetch('/api/apply',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id:j.id})}).then(r=>r.json()).then(d=>{
-        document.getElementById('msg').textContent=d.message||d.error;
-        if(d.message){btn.textContent='Applied \u2713';}else{btn.disabled=false;}
-      });
-    });
-  }
-}).catch(()=>{content.innerHTML='<p>Something went wrong.</p>';});
-});
+    if (j.role === 'seeker') {
+      html += `<div class="actions">${actionButtons(j)}</div>`;
+    }
+    content.innerHTML = html;
+  }).catch(() => { content.innerHTML = '<p>Something went wrong.</p>'; });
+}
+bindActions(content, load);
+load();
 </script>
 </body>
 </html>

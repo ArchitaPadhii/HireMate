@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requests | HireMate</title>
+<link rel="stylesheet" href="/static/hm.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="recruiter_dashboard.html">&larr; Dashboard</a>
+  <h1>Requests</h1>
+  <p id="info"></p>
+  <div id="list"></div>
+</div>
+<script src="/static/apply.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function color(n) { return n >= 60 ? '#22a35a' : (n >= 35 ? '#e8912d' : '#d64545'); }
+
+function load() {
+  fetch('/api/recruiter/applications').then(r => r.json()).then(d => {
+    const list = (d.applications || []).filter(a => a.status === 'pending');
+    $('info').innerHTML = list.length + ' pending request' + (list.length === 1 ? '' : 's') +
+      ' (<a href="replied.html">replied / waiting</a>)';
+    if (!list.length) {
+      $('list').innerHTML = '<div class="empty">Koi naya request nahi hai.</div>';
+      return;
+    }
+    $('list').innerHTML = list.map(a => `
+      <div class="card">
+        <div class="row">
+          ${a.match === null ? '' : `<div class="score" style="background:${color(a.match)}">${a.match}%</div>`}
+          <div class="grow">
+            <h3>${escapeHtml(a.seeker_name)}</h3>
+            <div class="meta">${escapeHtml(a.seeker_email)} &bull; Applied for <b>${escapeHtml(a.job_title)}</b>
+              (${escapeHtml(a.job_company)}) on ${escapeHtml((a.applied_at || '').slice(0, 10))}</div>
+            <div class="meta">Resume score: ${a.resume_score === null ? '-' : a.resume_score + '/100'}</div>
+            <div class="label">Matching skills:</div>
+            ${a.matched.map(s => `<span class="chip ok">${escapeHtml(s)}</span>`).join('') || '<span class="meta">None</span>'}
+            <div class="label">Missing skills:</div>
+            ${a.missing.map(s => `<span class="chip miss">${escapeHtml(s)}</span>`).join('') || '<span class="meta">None</span>'}
+            <div class="actions">
+              <a class="btn detail" href="/api/recruiter/resume?app_id=${a.app_id}" target="_blank">View Resume (PDF)</a>
+            </div>
+            <textarea id="msg${a.app_id}" rows="2" placeholder="Message for the candidate (optional)"></textarea>
+            <div class="actions">
+              <button class="btn accept" data-decision="accepted" data-id="${a.app_id}">Accept</button>
+              <button class="btn reject" data-decision="rejected" data-id="${a.app_id}">Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>`).join('');
+  });
+}
+
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-decision]');
+  if (!b || b.disabled) return;
+  const id = Number(b.dataset.id);
+  b.disabled = true;
+  fetch('/api/recruiter/reply', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: id, decision: b.dataset.decision, message: $('msg' + id).value})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); b.disabled = false; }
+    else { load(); }
+  });
+});
+load();
+</script>
+</body>
+</html>

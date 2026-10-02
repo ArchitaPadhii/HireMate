@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replied &amp; Waiting | HireMate</title>
+<link rel="stylesheet" href="/static/hm.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="recruiter_dashboard.html">&larr; Dashboard</a>
+  <h1>Replied &amp; Waiting</h1>
+  <h2 id="repliedTitle">Replied</h2>
+  <div id="replied"></div>
+  <h2 id="waitingTitle">Waiting for your reply</h2>
+  <div id="waiting"></div>
+</div>
+<script src="/static/apply.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+fetch('/api/recruiter/applications').then(r => r.json()).then(d => {
+  const all = d.applications || [];
+  const replied = all.filter(a => a.status !== 'pending')
+                     .sort((a, b) => (b.replied_at || '').localeCompare(a.replied_at || ''));
+  const waiting = all.filter(a => a.status === 'pending');
+
+  $('repliedTitle').textContent = 'Replied (' + replied.length + ')';
+  $('waitingTitle').textContent = 'Waiting for your reply (' + waiting.length + ')';
+
+  $('replied').innerHTML = replied.length ? replied.map(a => `
+    <div class="card">
+      <div class="top">
+        <div>
+          <h3>${escapeHtml(a.seeker_name)}</h3>
+          <div class="meta">${escapeHtml(a.seeker_email)} &bull; ${escapeHtml(a.job_title)} &bull; Replied on ${escapeHtml((a.replied_at || '').slice(0, 10))}</div>
+        </div>
+        <span class="status ${a.status}">${a.status === 'accepted' ? 'Accepted' : 'Rejected'}</span>
+      </div>
+      <div class="reply">${escapeHtml(a.reply_message)}</div>
+      <div class="actions"><a class="btn detail" href="/api/recruiter/resume?app_id=${a.app_id}" target="_blank">View Resume (PDF)</a></div>
+    </div>`).join('') : '<div class="empty">No replied applications yet.</div>';
+
+  $('waiting').innerHTML = waiting.length ? waiting.map(a => `
+    <div class="card">
+      <div class="top">
+        <div>
+          <h3>${escapeHtml(a.seeker_name)}</h3>
+          <div class="meta">${escapeHtml(a.seeker_email)} &bull; ${escapeHtml(a.job_title)} &bull; Applied on ${escapeHtml((a.applied_at || '').slice(0, 10))}</div>
+        </div>
+        <span class="status pending">Waiting</span>
+      </div>
+      <div class="actions">
+        <a class="btn detail" href="/api/recruiter/resume?app_id=${a.app_id}" target="_blank">View Resume (PDF)</a>
+        <a class="btn" href="requests.html">Reply</a>
+      </div>
+    </div>`).join('') : '<div class="empty">Koi request pending nahi hai.</div>';
+});
+</script>
+</body>
+</html>

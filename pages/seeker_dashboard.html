@@ -1,93 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Seeker Dashboard | HireMate</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard | HireMate</title>
+<link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/seeker_dashboard.html" class="logo">Hire<span>Mate</span></a>
-        <div class="nav-links">
-            <a href="/seeker_dashboard.html" class="active">Dashboard</a>
-            <a href="/upload_resume.html">Upload Resume</a>
-            <a href="/browse_jobs.html">Browse Jobs</a>
-            <a href="/recommended_jobs.html">Recommended Jobs</a>
-            <span class="user-chip" id="userName"></span>
-            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
-        </div>
-    </nav>
+<div class="nav">
+  <a class="brand" href="seeker_dashboard.html">HireMate</a>
+  <div class="nav-right"><span id="userName"></span><button class="logout" id="logoutBtn">Logout</button></div>
+</div>
 
-    <div class="dash">
-        <div class="welcome-banner">
-            <h1 id="welcome">Welcome</h1>
-            <p id="statusLine">Loading your dashboard...</p>
-        </div>
+<div class="hero">
+  <h1 id="welcome">Welcome</h1>
+  <p>Find jobs that match your resume and track your applications.</p>
+</div>
 
-        <div class="stats">
-            <div class="stat">
-                <div class="label">Resume Score</div>
-                <div class="value" id="statScore">-</div>
-            </div>
-            <div class="stat">
-                <div class="label">Skills Found</div>
-                <div class="value" id="statSkills">-</div>
-            </div>
-            <div class="stat">
-                <div class="label">Jobs Available</div>
-                <div class="value" id="statJobs">-</div>
-            </div>
-        </div>
+<div class="container">
+  <div class="stats">
+    <div class="stat"><div class="num" id="sScore">-</div><div class="lbl">Resume score</div></div>
+    <div class="stat"><div class="num" id="sSkills">-</div><div class="lbl">Skills found</div></div>
+    <div class="stat"><div class="num" id="sJobs">-</div><div class="lbl">Jobs available</div></div>
+    <div class="stat"><div class="num" id="sApplied">-</div><div class="lbl">Applied</div></div>
+    <div class="stat"><div class="num" id="sReplies">-</div><div class="lbl">Replies</div></div>
+  </div>
 
-        <h2 class="section-heading">Quick actions</h2>
-        <div class="dash-cards">
-            <a href="/upload_resume.html" class="action-card">
-                <div class="icon">📄</div>
-                <h3>Upload Resume</h3>
-                <p>Upload your PDF resume for instant AI analysis.</p>
-            </a>
-            <a href="/resume_result.html" class="action-card">
-                <div class="icon">📊</div>
-                <h3>Resume Analysis</h3>
-                <p>View your score, skills and missing skills.</p>
-            </a>
-            <a href="/recommended_jobs.html" class="action-card">
-                <div class="icon">🎯</div>
-                <h3>Recommended Jobs</h3>
-                <p>See the jobs that best match your profile.</p>
-            </a>
-        </div>
-    </div>
+  <div class="banner" id="banner">
+    <span>Resume upload nahi hua hai. Upload karo to job recommendations milenge.</span>
+    <a href="upload_resume.html">Upload Resume</a>
+  </div>
 
-    <script src="/static/script.js"></script>
-    <script>
-        async function init() {
-            const user = await loadUser();
-            if (!user) return;
-            document.getElementById("welcome").textContent = "Welcome, " + user.name;
+  <h2 class="section">Your resume</h2>
+  <div class="grid">
+    <a class="action" href="upload_resume.html">
+      <div class="ico">&#128196;</div><h3>Upload Resume</h3><p>Upload your PDF resume (new upload replaces the old one).</p>
+    </a>
+    <a class="action" href="resume_result.html">
+      <div class="ico">&#128202;</div><h3>Resume Analysis</h3><p>See your score, skills and resume sections.</p>
+    </a>
+  </div>
 
-            const res = await fetch("/api/seeker/stats");
-            const stats = await res.json();
+  <h2 class="section">Jobs</h2>
+  <div class="grid">
+    <a class="action" href="recommended_jobs.html">
+      <div class="ico">&#11088;</div><h3>Recommended Jobs</h3><p>Best matches for your resume, with the skills you are missing.</p>
+    </a>
+    <a class="action" href="browse_jobs.html">
+      <div class="ico">&#128269;</div><h3>Browse Jobs</h3><p>Search all jobs by title, company, location or skill.</p>
+    </a>
+  </div>
 
-            document.getElementById("statJobs").textContent = stats.jobs_available;
+  <h2 class="section">Applications</h2>
+  <div class="grid">
+    <a class="action" href="my_applications.html">
+      <div class="ico">&#128221;</div><h3>My Applications</h3><p>Jobs you applied to, with their status. Withdraw if needed.</p>
+    </a>
+    <a class="action" href="replies.html">
+      <span class="count" id="repliesBadge"></span>
+      <div class="ico">&#128236;</div><h3>Company Replies</h3><p>Accepted or rejected, with the message from the company.</p>
+    </a>
+  </div>
+</div>
 
-            if (stats.resume_uploaded) {
-                if (stats.score !== null) {
-                    document.getElementById("statScore").innerHTML = stats.score + "<small>/100</small>";
-                } else {
-                    document.getElementById("statScore").textContent = "Pending";
-                }
-                document.getElementById("statSkills").textContent = stats.skills_count;
-                document.getElementById("statusLine").textContent =
-                    "Your resume is analyzed. Open Resume Analysis to see your score and skill gaps.";
-            } else {
-                document.getElementById("statusLine").textContent =
-                    "Get started by uploading your resume.";
-            }
-        }
-        init();
-    </script>
+<script>
+const $ = id => document.getElementById(id);
+
+fetch('/api/me').then(r => {
+  if (r.status === 401) { window.location.href = 'login.html'; return null; }
+  return r.json();
+}).then(u => {
+  if (!u) return;
+  $('welcome').textContent = 'Welcome back, ' + u.name + ' \uD83D\uDC4B';
+  $('userName').textContent = u.name;
+});
+
+fetch('/api/seeker/stats').then(r => r.json()).then(s => {
+  if (s.error) return;
+  $('sScore').textContent = s.resume_uploaded && s.score !== null ? s.score + '/100' : '-';
+  $('sSkills').textContent = s.skills_count;
+  $('sJobs').textContent = s.jobs_available;
+  $('sApplied').textContent = s.applied;
+  $('sReplies').textContent = s.replies;
+  if (!s.resume_uploaded) $('banner').style.display = 'flex';
+  if (s.replies > 0) { $('repliesBadge').textContent = s.replies; $('repliesBadge').style.display = 'block'; }
+});
+
+$('logoutBtn').addEventListener('click', () => {
+  fetch('/api/logout', {method: 'POST'}).then(() => { window.location.href = 'login.html'; });
+});
+</script>
 </body>
 </html>

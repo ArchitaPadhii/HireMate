@@ -31,12 +31,16 @@ SEEKER_PAGES = {
     "resume_result.html",
     "browse_jobs.html",
     "recommended_jobs.html",
+    "my_applications.html",
+    "replies.html",
 }
 RECRUITER_PAGES = {
     "recruiter_dashboard.html",
     "post_job.html",
     "my_jobs.html",
     "ranked_candidates.html",
+    "requests.html",
+    "replied.html",
 }
 # Pages that any logged-in user (seeker or recruiter) can open
 SHARED_PAGES = {"job_detail.html"}
@@ -68,6 +72,21 @@ def job_to_dict(row, full_description=False):
     else:
         job["snippet"] = description[:220] + ("..." if len(description) > 220 else "")
     return job
+
+
+def add_apply_info(job, row, statuses):
+    """Add application info to a job dictionary:
+    'application_status' = None (not applied) / 'pending' / 'accepted' / 'rejected'
+    'contact_email'      = recruiter's email (empty for dataset jobs)"""
+    status = statuses.get(row["id"])
+    job["application_status"] = status
+    job["applied"] = status is not None
+    email = ""
+    if row["recruiter_id"]:
+        recruiter = db.get_user_by_id(row["recruiter_id"])
+        if recruiter:
+            email = recruiter["email"]
+    job["contact_email"] = email
 
 
 class HireMateHandler(BaseHTTPRequestHandler):
@@ -161,11 +180,14 @@ class HireMateHandler(BaseHTTPRequestHandler):
             skills_count = 0
             if resume and resume["skills"]:
                 skills_count = len([s for s in resume["skills"].split(",") if s.strip()])
+            my_apps = db.get_seeker_applications(user["id"])
             self.send_json({
                 "resume_uploaded": resume is not None,
                 "score": resume["score"] if resume else None,
                 "skills_count": skills_count,
                 "jobs_available": db.count_jobs(),
+                "applied": len(my_apps),
+                "replies": len([a for a in my_apps if a["status"] != "pending"]),
             })
             return
 
@@ -224,8 +246,13 @@ class HireMateHandler(BaseHTTPRequestHandler):
 
             rows, total = db.search_jobs(query, page, JOBS_PER_PAGE, location, source)
             pages = max(1, (total + JOBS_PER_PAGE - 1) // JOBS_PER_PAGE)
+            jobs = [job_to_dict(r) for r in rows]
+            if user["role"] == "seeker":
+                statuses = db.get_application_statuses(user["id"])
+                for job, r in zip(jobs, rows):
+                    add_apply_info(job, r, statuses)
             self.send_json({
-                "jobs": [job_to_dict(r) for r in rows],
+                "jobs": jobs,
                 "total": total,
                 "page": page,
                 "pages": pages,
@@ -247,9 +274,12 @@ class HireMateHandler(BaseHTTPRequestHandler):
             if user is None or user["role"] != "recruiter":
                 self.send_json({"error": "Not allowed"}, 403)
                 return
+            received = db.get_applications_for_recruiter(user["id"])
             self.send_json({
                 "jobs_posted": db.count_jobs(user["id"]),
                 "candidates": db.count_resumes(),
+                "requests_pending": len([a for a in received if a["status"] == "pending"]),
+                "replied": len([a for a in received if a["status"] != "pending"]),
             })
             return
 
@@ -265,9 +295,11 @@ class HireMateHandler(BaseHTTPRequestHandler):
                 return
             skills = [s for s in (resume["skills"] or "").split(",") if s.strip()]
             results = matching.recommend(resume["text"] or "", skills, 20)
+            statuses = db.get_application_statuses(user["id"])
             jobs = []
             for r in results:
                 job = job_to_dict(r["row"])
+                add_apply_info(job, r["row"], statuses)
                 job["score"] = r["score"]
                 job["matched"] = r["matched"]
                 job["missing"] = r["missing"]
@@ -312,13 +344,95 @@ class HireMateHandler(BaseHTTPRequestHandler):
                 return
             job = job_to_dict(row, full_description=True)
             job["role"] = user["role"]
+            statuses = db.get_application_statuses(user["id"]) if user["role"] == "seeker" else {}
+            add_apply_info(job, row, statuses)
             if user["role"] == "seeker":
-                job["applied"] = db.has_applied(job_id, user["id"])
                 resume = db.get_latest_resume(user["id"])
                 if resume:
                     skills = [s for s in (resume["skills"] or "").split(",") if s.strip()]
                     job["match"] = matching.score_one(resume["text"] or "", skills, job_id)
             self.send_json(job)
+            return
+
+        # Seeker: all jobs this seeker applied to (with status and company reply)
+        if path == "/api/seeker/applications":
+            user = self.get_current_user()
+            if user is None or user["role"] != "seeker":
+                self.send_json({"error": "Not allowed"}, 403)
+                return
+            apps = []
+            for r in db.get_seeker_applications(user["id"]):
+                apps.append({
+                    "app_id": r["app_id"],
+                    "job_id": r["job_id"],
+                    "title": r["title"],
+                    "company": r["company"] or "",
+                    "location": r["location"] or "",
+                    "source": r["source"],
+                    "status": r["status"],
+                    "reply_message": r["reply_message"] or "",
+                    "applied_at": r["created_at"],
+                    "replied_at": r["replied_at"],
+                })
+            self.send_json({"applications": apps})
+            return
+
+        # Recruiter: every application received on this recruiter's jobs
+        if path == "/api/recruiter/applications":
+            user = self.get_current_user()
+            if user is None or user["role"] != "recruiter":
+                self.send_json({"error": "Not allowed"}, 403)
+                return
+            apps = []
+            for r in db.get_applications_for_recruiter(user["id"]):
+                skills = [s for s in (r["resume_skills"] or "").split(",") if s.strip()]
+                match = matching.score_one(r["resume_text"] or "", skills, r["job_id"], 1)
+                apps.append({
+                    "app_id": r["app_id"],
+                    "job_id": r["job_id"],
+                    "job_title": r["job_title"],
+                    "job_company": r["job_company"] or "",
+                    "seeker_name": r["seeker_name"],
+                    "seeker_email": r["seeker_email"],
+                    "skills": skills,
+                    "resume_score": r["resume_score"],
+                    "match": match["score"] if match else None,
+                    "matched": match["matched"] if match else [],
+                    "missing": match["missing"] if match else [],
+                    "status": r["status"],
+                    "reply_message": r["reply_message"] or "",
+                    "applied_at": r["created_at"],
+                    "replied_at": r["replied_at"],
+                })
+            self.send_json({"applications": apps})
+            return
+
+        # Recruiter: open the PDF resume of someone who applied to this recruiter's job
+        if path == "/api/recruiter/resume":
+            user = self.get_current_user()
+            if user is None or user["role"] != "recruiter":
+                self.send_json({"error": "Not allowed"}, 403)
+                return
+            try:
+                app_id = int(self.get_query_params().get("app_id", "0"))
+            except ValueError:
+                app_id = 0
+            owner = db.get_application_owner(app_id)
+            if owner is None or owner["recruiter_id"] != user["id"]:
+                self.send_json({"error": "Not found"}, 404)
+                return
+            pdf_path = os.path.join(UPLOADS_DIR, f"user{owner['seeker_id']}.pdf")
+            if not os.path.isfile(pdf_path):
+                self.send_json({"error": "Resume file not found"}, 404)
+                return
+            with open(pdf_path, "rb") as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Disposition", 'inline; filename="resume.pdf"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
             return
 
         # ----- PAGES -----
@@ -377,6 +491,10 @@ class HireMateHandler(BaseHTTPRequestHandler):
             self.handle_delete_job()
         elif path == "/api/apply":
             self.handle_apply()
+        elif path == "/api/withdraw":
+            self.handle_withdraw()
+        elif path == "/api/recruiter/reply":
+            self.handle_reply()
         else:
             self.send_error(404)
 
@@ -558,6 +676,48 @@ class HireMateHandler(BaseHTTPRequestHandler):
             self.send_json({"message": "Applied successfully"})
         else:
             self.send_json({"error": "You have already applied to this job"}, 400)
+
+    # Seeker takes back an application (only while it is still pending)
+    def handle_withdraw(self):
+        user = self.get_current_user()
+        if user is None or user["role"] != "seeker":
+            self.send_json({"error": "Not allowed"}, 403)
+            return
+        data = self.read_json()
+        try:
+            job_id = int(data.get("id", 0))
+        except (TypeError, ValueError):
+            job_id = 0
+        if db.withdraw_application(job_id, user["id"]):
+            self.send_json({"message": "Application withdrawn"})
+        else:
+            self.send_json({"error": "Cannot withdraw: the company has already replied"}, 400)
+
+    # Recruiter accepts or rejects one application
+    def handle_reply(self):
+        user = self.get_current_user()
+        if user is None or user["role"] != "recruiter":
+            self.send_json({"error": "Not allowed"}, 403)
+            return
+        data = self.read_json()
+        try:
+            app_id = int(data.get("id", 0))
+        except (TypeError, ValueError):
+            app_id = 0
+        decision = data.get("decision", "")
+        if decision not in ("accepted", "rejected"):
+            self.send_json({"error": "Decision must be accepted or rejected"}, 400)
+            return
+        message = data.get("message", "").strip()[:500]
+        if not message:
+            if decision == "accepted":
+                message = "Congratulations! Your profile has been shortlisted. We will contact you soon."
+            else:
+                message = "Thank you for applying. We will not be moving forward with your application."
+        if db.reply_to_application(app_id, user["id"], decision, message):
+            self.send_json({"message": "Reply sent"})
+        else:
+            self.send_json({"error": "Request not found or already answered"}, 404)
 
 
 if __name__ == "__main__":

@@ -64,8 +64,12 @@ def _build_index():
     _cache.update(key=key, idf=idf, vectors=vectors, rows={r["id"]: r for r in rows})
 
 
-def _score(resume_vec, resume_skills, job_id):
-    """Return (percent, matched_skills, missing_skills) for one resume-job pair."""
+def _score(resume_vec, resume_skills, job_id, min_skills=1):
+    """Return (percent, matched_skills, missing_skills) for one resume-job pair.
+
+    min_skills: a job with only 1-2 listed skills should not get a perfect skill score
+    just because the resume has those 1-2 skills. The skill part is divided by at least
+    this many skills (used for job seekers; recruiters use 1)."""
     row = _cache["rows"][job_id]
     job_skills = [s.strip() for s in (row["skills"] or "").split(",") if s.strip()]
     have = {s.lower() for s in resume_skills}
@@ -75,7 +79,7 @@ def _score(resume_vec, resume_skills, job_id):
 
     text_pct = min(1.0, _cosine(resume_vec, _cache["vectors"][job_id]) * 2.5)
     if job_skills:
-        skill_pct = len(matched) / len(job_skills)
+        skill_pct = len(matched) / max(len(job_skills), min_skills)
         final = 0.6 * skill_pct + 0.4 * text_pct
     else:
         final = text_pct
@@ -83,13 +87,20 @@ def _score(resume_vec, resume_skills, job_id):
 
 
 def recommend(resume_text, resume_skills, limit=20):
-    """Best jobs for a resume. Returns a list of dicts, highest score first."""
+    """Best jobs for a resume. Returns a list of dicts, highest score first.
+
+    Dataset jobs with fewer than 3 detected skills are skipped, because we cannot
+    tell the seeker anything useful about them (no skills to match or to miss).
+    Jobs posted by recruiters on HireMate are always included."""
     _build_index()
     vec = _vectorize(resume_text, _cache["idf"])
     results = []
-    for job_id in _cache["rows"]:
-        score, matched, missing = _score(vec, resume_skills, job_id)
-        results.append({"row": _cache["rows"][job_id], "score": score,
+    for job_id, row in _cache["rows"].items():
+        job_skills = [s for s in (row["skills"] or "").split(",") if s.strip()]
+        if len(job_skills) < 3 and row["source"] != "recruiter":
+            continue
+        score, matched, missing = _score(vec, resume_skills, job_id, min_skills=5)
+        results.append({"row": row, "score": score,
                         "matched": matched, "missing": missing})
     results.sort(key=lambda r: (r["score"], r["row"]["source"] == "recruiter"), reverse=True)
     return results[:limit]
@@ -117,11 +128,13 @@ def rank_candidates(job_id, limit=50):
     results.sort(key=lambda r: r["score"], reverse=True)
     return results[:limit]
 
-def score_one(resume_text, resume_skills, job_id):
-    """Match score for one resume and one job."""
+
+def score_one(resume_text, resume_skills, job_id, min_skills=5):
+    """Match score for one resume and one job.
+    Seekers use min_skills=5 (same as recommendations), recruiters pass 1."""
     _build_index()
     if job_id not in _cache["rows"]:
         return None
     vec = _vectorize(resume_text, _cache["idf"])
-    score, matched, missing = _score(vec, resume_skills, job_id)
+    score, matched, missing = _score(vec, resume_skills, job_id, min_skills)
     return {"score": score, "matched": matched, "missing": missing}

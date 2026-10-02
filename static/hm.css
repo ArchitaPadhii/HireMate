@@ -1,0 +1,43 @@
+/* hm.css - shared styles for the Step 9-12 pages */
+body{font-family:Segoe UI,Arial,sans-serif;background:#f4f6fb;margin:0;color:#222}
+.wrap{max-width:900px;margin:30px auto;padding:0 16px}
+a.back{color:#4b36b8;text-decoration:none}
+h1{margin:10px 0}
+.card{background:#fff;border-radius:12px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card h3{margin:0 0 4px}
+.card h3 a{color:#222;text-decoration:none}
+.meta{color:#666;font-size:14px;margin-bottom:6px}
+.snippet{font-size:14px;color:#444;margin-top:6px}
+.label{font-size:13px;color:#555;margin-top:8px}
+.chip{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;margin:2px;background:#eceef5}
+.chip.ok{background:#d9f5e3;color:#116b35}
+.chip.miss{background:#fde2e2;color:#9b1c1c}
+.badge{background:#e8e4ff;color:#4b36b8;padding:2px 8px;border-radius:10px;font-size:12px}
+.actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:#4b36b8;color:#fff;border:0;padding:8px 18px;border-radius:8px;font-size:14px;
+     cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit}
+.btn:disabled{background:#999;cursor:default}
+.btn.applied{background:#22a35a}
+.btn.withdraw{background:#fff;color:#c0392b;border:1px solid #c0392b}
+.btn.mail{background:#fff;color:#4b36b8;border:1px solid #4b36b8}
+.btn.detail{background:#eceef5;color:#333}
+.btn.accept{background:#22a35a}
+.btn.reject{background:#d64545}
+.status{padding:4px 12px;border-radius:12px;font-size:13px;font-weight:600;display:inline-block}
+.status.pending{background:#fff3d6;color:#a76a00}
+.status.accepted{background:#d9f5e3;color:#116b35}
+.status.rejected{background:#fde2e2;color:#9b1c1c}
+.reply{background:#f4f6fb;border-left:4px solid #4b36b8;padding:10px 14px;margin-top:10px;
+       border-radius:6px;font-size:14px;white-space:pre-wrap}
+.empty{color:#666;padding:24px;text-align:center}
+textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccc;border-radius:8px;
+         font-family:inherit;font-size:14px;margin-top:10px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.filters input,.filters select{padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;flex:1;min-width:150px}
+.pager{display:flex;gap:14px;align-items:center;justify-content:center;margin:20px 0}
+.row{display:flex;gap:16px;align-items:flex-start}
+.score{min-width:64px;height:64px;border-radius:50%;display:flex;align-items:center;
+       justify-content:center;font-weight:700;font-size:18px;color:#fff}
+.grow{flex:1}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+h2{margin:26px 0 4px}

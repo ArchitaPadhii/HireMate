@@ -57,17 +57,30 @@ def init_db():
             FOREIGN KEY (recruiter_id) REFERENCES users(id)
         );
 
+        -- status = 'pending', 'accepted' or 'rejected'
         CREATE TABLE IF NOT EXISTS applications (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id     INTEGER NOT NULL,
-            seeker_id  INTEGER NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id        INTEGER NOT NULL,
+            seeker_id     INTEGER NOT NULL,
+            created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+            status        TEXT NOT NULL DEFAULT 'pending',
+            reply_message TEXT,
+            replied_at    TEXT,
             UNIQUE (job_id, seeker_id),
             FOREIGN KEY (job_id) REFERENCES jobs(id),
             FOREIGN KEY (seeker_id) REFERENCES users(id)
         );
-
     """)
+
+    # Migration: the applications table from Step 11 had no status / reply columns.
+    app_columns = [row["name"] for row in conn.execute("PRAGMA table_info(applications)")]
+    if "status" not in app_columns:
+        conn.execute("ALTER TABLE applications ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'")
+    if "reply_message" not in app_columns:
+        conn.execute("ALTER TABLE applications ADD COLUMN reply_message TEXT")
+    if "replied_at" not in app_columns:
+        conn.execute("ALTER TABLE applications ADD COLUMN replied_at TEXT")
+
     conn.commit()
     conn.close()
 
@@ -181,6 +194,13 @@ def create_job(recruiter_id, title, company, location, skills, experience, descr
     conn.close()
 
 
+def get_job(job_id):
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    conn.close()
+    return row
+
+
 def get_jobs_by_recruiter(recruiter_id):
     conn = get_connection()
     rows = conn.execute(
@@ -191,19 +211,23 @@ def get_jobs_by_recruiter(recruiter_id):
 
 
 def delete_job(job_id, recruiter_id):
-    """Delete a job, but only if it belongs to this recruiter. Returns True if deleted."""
+    """Delete a job (and its applications), but only if it belongs to this recruiter.
+    Returns True if deleted."""
     conn = get_connection()
     cursor = conn.execute(
         "DELETE FROM jobs WHERE id = ? AND recruiter_id = ?", (job_id, recruiter_id)
     )
-    conn.commit()
     deleted = cursor.rowcount > 0
+    if deleted:
+        conn.execute("DELETE FROM applications WHERE job_id = ?", (job_id,))
+    conn.commit()
     conn.close()
     return deleted
 
 
 def search_jobs(query, page, per_page=10, location="", source=""):
-    """Search jobs with optional location and source filters. Returns (rows, total)."""
+    """Search jobs with optional location and source filters. Returns (rows, total).
+    Jobs posted by recruiters come first, then dataset jobs."""
     conn = get_connection()
     conditions = []
     params = []
@@ -228,11 +252,6 @@ def search_jobs(query, page, per_page=10, location="", source=""):
     conn.close()
     return rows, total
 
-def get_job(job_id):
-    conn = get_connection()
-    row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
-    conn.close()
-    return row
 
 # ---------- APPLICATIONS ----------
 def apply_to_job(job_id, seeker_id):
@@ -249,12 +268,34 @@ def apply_to_job(job_id, seeker_id):
         conn.close()
 
 
+def withdraw_application(job_id, seeker_id):
+    """Remove an application, but only while it is still pending. Returns True if removed."""
+    conn = get_connection()
+    cursor = conn.execute(
+        "DELETE FROM applications WHERE job_id = ? AND seeker_id = ? AND status = 'pending'",
+        (job_id, seeker_id),
+    )
+    conn.commit()
+    removed = cursor.rowcount > 0
+    conn.close()
+    return removed
+
+
 def has_applied(job_id, seeker_id):
     conn = get_connection()
     row = conn.execute("SELECT 1 FROM applications WHERE job_id = ? AND seeker_id = ?",
                        (job_id, seeker_id)).fetchone()
     conn.close()
     return row is not None
+
+
+def get_application_statuses(seeker_id):
+    """Returns {job_id: status} for every job this seeker applied to."""
+    conn = get_connection()
+    rows = conn.execute("SELECT job_id, status FROM applications WHERE seeker_id = ?",
+                        (seeker_id,)).fetchall()
+    conn.close()
+    return {r["job_id"]: r["status"] for r in rows}
 
 
 def get_applicant_emails(job_id):
@@ -266,9 +307,67 @@ def get_applicant_emails(job_id):
     conn.close()
     return {r["email"] for r in rows}
 
-def get_applied_job_ids(seeker_id):
+
+def get_seeker_applications(seeker_id):
+    """All applications of one seeker, newest first, with the job details."""
     conn = get_connection()
-    rows = conn.execute("SELECT job_id FROM applications WHERE seeker_id = ?",
-                        (seeker_id,)).fetchall()
+    rows = conn.execute(
+        """SELECT a.id AS app_id, a.job_id, a.status, a.reply_message,
+                  a.created_at, a.replied_at,
+                  j.title, j.company, j.location, j.source
+           FROM applications a JOIN jobs j ON j.id = a.job_id
+           WHERE a.seeker_id = ?
+           ORDER BY a.id DESC""", (seeker_id,)
+    ).fetchall()
     conn.close()
-    return {r["job_id"] for r in rows}
+    return rows
+
+
+def get_applications_for_recruiter(recruiter_id):
+    """All applications received on the jobs of one recruiter, newest first."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT a.id AS app_id, a.job_id, a.status, a.reply_message,
+                  a.created_at, a.replied_at,
+                  j.title AS job_title, j.company AS job_company,
+                  u.name AS seeker_name, u.email AS seeker_email,
+                  r.skills AS resume_skills, r.score AS resume_score,
+                  r.text AS resume_text
+           FROM applications a
+           JOIN jobs j ON j.id = a.job_id
+           JOIN users u ON u.id = a.seeker_id
+           LEFT JOIN resumes r ON r.user_id = u.id
+           WHERE j.recruiter_id = ?
+           ORDER BY a.id DESC""", (recruiter_id,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_application_owner(app_id):
+    """Who applied (seeker_id) and who owns the job (recruiter_id) for one application."""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT a.seeker_id, j.recruiter_id
+           FROM applications a JOIN jobs j ON j.id = a.job_id
+           WHERE a.id = ?""", (app_id,)
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def reply_to_application(app_id, recruiter_id, status, message):
+    """Accept or reject a pending application of this recruiter's job.
+    Returns True if the reply was saved."""
+    conn = get_connection()
+    cursor = conn.execute(
+        """UPDATE applications
+           SET status = ?, reply_message = ?, replied_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND status = 'pending'
+             AND job_id IN (SELECT id FROM jobs WHERE recruiter_id = ?)""",
+        (status, message, app_id, recruiter_id),
+    )
+    conn.commit()
+    saved = cursor.rowcount > 0
+    conn.close()
+    return saved

@@ -1,83 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recruiter Dashboard | HireMate</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard | HireMate</title>
+<link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/recruiter_dashboard.html" class="logo">Hire<span>Mate</span></a>
-        <div class="nav-links">
-            <a href="/recruiter_dashboard.html" class="active">Dashboard</a>
-            <a href="/post_job.html">Post a Job</a>
-            <a href="/my_jobs.html">My Jobs</a>
-            <span class="user-chip" id="userName"></span>
-            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
-        </div>
-    </nav>
+<div class="nav">
+  <a class="brand" href="recruiter_dashboard.html">HireMate</a>
+  <div class="nav-right"><span id="userName"></span><button class="logout" id="logoutBtn">Logout</button></div>
+</div>
 
-    <div class="dash">
-        <div class="welcome-banner">
-            <h1 id="welcome">Welcome</h1>
-            <p id="statusLine">Loading your dashboard...</p>
-        </div>
+<div class="hero">
+  <h1 id="welcome">Welcome</h1>
+  <p>Post jobs, find the best candidates and reply to applications.</p>
+</div>
 
-        <div class="stats stats-2">
-            <div class="stat">
-                <div class="label">Jobs Posted</div>
-                <div class="value" id="statJobs">-</div>
-            </div>
-            <div class="stat">
-                <div class="label">Candidates on Platform</div>
-                <div class="value" id="statCandidates">-</div>
-            </div>
-        </div>
+<div class="container">
+  <div class="stats">
+    <div class="stat"><div class="num" id="sJobs">-</div><div class="lbl">Jobs posted</div></div>
+    <div class="stat"><div class="num" id="sCandidates">-</div><div class="lbl">Candidates (resumes)</div></div>
+    <div class="stat"><div class="num" id="sPending">-</div><div class="lbl">Pending requests</div></div>
+    <div class="stat"><div class="num" id="sReplied">-</div><div class="lbl">Replied</div></div>
+  </div>
 
-        <h2 class="section-heading">Quick actions</h2>
-        <div class="dash-cards">
-            <a href="/post_job.html" class="action-card">
-                <div class="icon">📝</div>
-                <h3>Post a Job</h3>
-                <p>Add a job with skills, experience and description.</p>
-            </a>
-            <a href="/my_jobs.html" class="action-card">
-                <div class="icon">💼</div>
-                <h3>My Jobs</h3>
-                <p>See all the jobs you have posted.</p>
-            </a>
-            <a href="/my_jobs.html" class="action-card">
-                <div class="icon">🏆</div>
-                <h3>Ranked Candidates</h3>
-                <p>Pick a job and see the best-fit candidates.</p>
-            </a>
-        </div>
-    </div>
+  <h2 class="section">Jobs</h2>
+  <div class="grid">
+    <a class="action" href="post_job.html">
+      <div class="ico">&#10133;</div><h3>Post a Job</h3><p>Add a new job. Skills are detected from the description too.</p>
+    </a>
+    <a class="action" href="my_jobs.html">
+      <div class="ico">&#128188;</div><h3>My Jobs</h3><p>See and delete the jobs you posted.</p>
+    </a>
+    <a class="action" href="ranked_candidates.html">
+      <div class="ico">&#127942;</div><h3>Ranked Candidates</h3><p>Best matching resumes for each of your jobs.</p>
+    </a>
+  </div>
 
-    <script src="/static/script.js"></script>
-    <script>
-        async function init() {
-            const user = await loadUser();
-            if (!user) return;
-            document.getElementById("welcome").textContent = "Welcome, " + user.name;
+  <h2 class="section">Applications</h2>
+  <div class="grid">
+    <a class="action" href="requests.html">
+      <span class="count" id="pendingBadge"></span>
+      <div class="ico">&#128229;</div><h3>Requests</h3><p>New applications. View the resume, then accept or reject.</p>
+    </a>
+    <a class="action" href="replied.html">
+      <div class="ico">&#9989;</div><h3>Replied &amp; Waiting</h3><p>Who you replied to, and who is still waiting for you.</p>
+    </a>
+  </div>
+</div>
 
-            const res = await fetch("/api/recruiter/stats");
-            const stats = await res.json();
+<script>
+const $ = id => document.getElementById(id);
 
-            document.getElementById("statJobs").textContent = stats.jobs_posted;
-            document.getElementById("statCandidates").textContent = stats.candidates;
+fetch('/api/me').then(r => {
+  if (r.status === 401) { window.location.href = 'login.html'; return null; }
+  return r.json();
+}).then(u => {
+  if (!u) return;
+  $('welcome').textContent = 'Welcome back, ' + u.name + ' \uD83D\uDC4B';
+  $('userName').textContent = u.name;
+});
 
-            if (stats.jobs_posted === 0) {
-                document.getElementById("statusLine").textContent =
-                    "Get started by posting your first job.";
-            } else {
-                document.getElementById("statusLine").textContent =
-                    "Manage your jobs and review ranked candidates.";
-            }
-        }
-        init();
-    </script>
+fetch('/api/recruiter/stats').then(r => r.json()).then(s => {
+  if (s.error) return;
+  $('sJobs').textContent = s.jobs_posted;
+  $('sCandidates').textContent = s.candidates;
+  $('sPending').textContent = s.requests_pending;
+  $('sReplied').textContent = s.replied;
+  if (s.requests_pending > 0) { $('pendingBadge').textContent = s.requests_pending; $('pendingBadge').style.display = 'block'; }
+});
+
+$('logoutBtn').addEventListener('click', () => {
+  fetch('/api/logout', {method: 'POST'}).then(() => { window.location.href = 'login.html'; });
+});
+</script>
 </body>
 </html>
